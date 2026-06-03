@@ -1,0 +1,31 @@
+{
+    "timestamp": "2026-05-27 19:04:35.485025",
+    "nominal_scenario": {
+        "temperature": {
+            "drift_detected": true,
+            "method": "Kolmogorov-Smirnov",
+            "statistic": 0.6578417321520666,
+            "p_value": 7.760324969028822e-132
+        },
+        "consommation": {
+            "drift_detected": true,
+            "method": "Kolmogorov-Smirnov",
+            "statistic": 0.4468206818264538,
+            "p_value": 3.0524932146326164e-57
+        }
+    },
+    "drifted_scenario": {
+        "temperature": {
+            "drift_detected": true,
+            "method": "Kolmogorov-Smirnov",
+            "statistic": 0.9856514695672298,
+            "p_value": 5.4e-323
+        },
+        "consommation": {
+            "drift_detected": true,
+            "method": "Kolmogorov-Smirnov",
+            "statistic": 0.9748155615697817,
+            "p_value": 1.14e-322
+        }
+    }
+}

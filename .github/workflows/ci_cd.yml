@@ -1,0 +1,109 @@
+name: CI/CD Pipeline - EDF/RTE Predictor
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-quality:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install Linting & Quality tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install black flake8 mypy pandas numpy types-requests types-urllib3
+
+    - name: Format Check with Black
+      run: black --check src/
+
+    - name: Lint with Flake8
+      run: flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
+
+    - name: Type Check with Mypy
+      run: mypy --ignore-missing-imports src/
+
+  unit-tests:
+    needs: lint-and-quality
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install Dependencies & Pytest
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov httpx
+
+    - name: Run unit and integration tests
+      run: pytest --cov=src tests/ --cov-report=xml
+
+  security-scans:
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Bandit for code security scan
+      run: pip install bandit
+
+    - name: Run Bandit scan
+      run: bandit -r src/ -ll
+
+    - name: Run Trivy vulnerability scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        ignore-unfixed: true
+        format: 'table'
+        severity: 'HIGH,CRITICAL'
+
+  build-and-push-docker:
+    needs: security-scans
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Log in to Registry
+      uses: docker/login-action@v2
+      with:
+        registry: edf-rte-registry.azurecr.io
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
+
+    - name: Build and push production image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: |
+          edf-rte-registry.azurecr.io/predictor-api:latest
+          edf-rte-registry.azurecr.io/predictor-api:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Run Trivy on built image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'edf-rte-registry.azurecr.io/predictor-api:${{ github.sha }}'
+        format: 'table'
+        exit-code: '0'
+        ignore-unfixed: true
+        severity: 'HIGH,CRITICAL'
