@@ -1,31 +1,79 @@
 {
-    "timestamp": "2026-05-27 19:04:35.485025",
-    "nominal_scenario": {
-        "temperature": {
+    "data_source": "RTE Eco2mix folder: data/raw (14 files)",
+    "reference_period": [
+        "2012-01-01 00:00:00",
+        "2023-04-08 00:00:00"
+    ],
+    "current_period": [
+        "2023-04-09 00:00:00",
+        "2026-01-31 00:00:00"
+    ],
+    "features_checked": [
+        "target_consumption_mw",
+        "forecast_j_1",
+        "forecast_j",
+        "nuclear",
+        "wind",
+        "solar",
+        "gas",
+        "hydraulic",
+        "co2_rate"
+    ],
+    "method": "Kolmogorov-Smirnov if scipy is available, otherwise mean/std fallback",
+    "results": {
+        "target_consumption_mw": {
             "drift_detected": true,
             "method": "Kolmogorov-Smirnov",
-            "statistic": 0.6578417321520666,
-            "p_value": 7.760324969028822e-132
+            "statistic": 0.2193877551020408,
+            "p_value": 3.483264487308366e-35
         },
-        "consommation": {
+        "forecast_j_1": {
             "drift_detected": true,
             "method": "Kolmogorov-Smirnov",
-            "statistic": 0.4468206818264538,
-            "p_value": 3.0524932146326164e-57
-        }
-    },
-    "drifted_scenario": {
-        "temperature": {
-            "drift_detected": true,
-            "method": "Kolmogorov-Smirnov",
-            "statistic": 0.9856514695672298,
-            "p_value": 5.4e-323
+            "statistic": 0.25801749271137026,
+            "p_value": 1.1449173017772516e-48
         },
-        "consommation": {
+        "forecast_j": {
             "drift_detected": true,
             "method": "Kolmogorov-Smirnov",
-            "statistic": 0.9748155615697817,
-            "p_value": 1.14e-322
+            "statistic": 0.2602040816326531,
+            "p_value": 1.687078026979567e-49
+        },
+        "nuclear": {
+            "drift_detected": true,
+            "method": "Kolmogorov-Smirnov",
+            "statistic": 0.19630709426627793,
+            "p_value": 3.301120104045341e-28
+        },
+        "wind": {
+            "drift_detected": true,
+            "method": "Kolmogorov-Smirnov",
+            "statistic": 0.31462585034013607,
+            "p_value": 1.311310431262905e-72
+        },
+        "solar": {
+            "drift_detected": true,
+            "method": "Kolmogorov-Smirnov",
+            "statistic": 0.5743440233236151,
+            "p_value": 1.576766594543084e-253
+        },
+        "gas": {
+            "drift_detected": true,
+            "method": "Kolmogorov-Smirnov",
+            "statistic": 0.2844995140913508,
+            "p_value": 3.066751613858099e-59
+        },
+        "hydraulic": {
+            "drift_detected": true,
+            "method": "Kolmogorov-Smirnov",
+            "statistic": 0.08794946550048591,
+            "p_value": 5.6047316891758914e-06
+        },
+        "co2_rate": {
+            "drift_detected": true,
+            "method": "Kolmogorov-Smirnov",
+            "statistic": 0.5468901846452867,
+            "p_value": 3.3226211787509196e-228
         }
     }
 }

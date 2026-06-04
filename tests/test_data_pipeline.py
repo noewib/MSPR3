@@ -3,50 +3,52 @@ import pandas as pd
 import numpy as np
 from src.data.data_pipeline import DataPipeline
 
+
 class TestDataPipeline(unittest.TestCase):
     def setUp(self):
         self.pipeline = DataPipeline()
 
-    def test_generate_historical_data(self):
-        # Generate 5 days of data
-        df = self.pipeline.generate_historical_data(days=5)
-        self.assertIsInstance(df, pd.DataFrame)
-        self.assertIn('datetime', df.columns)
-        self.assertIn('temperature', df.columns)
-        self.assertIn('consommation', df.columns)
-        
-        # 5 days * 48 records per day (half-hourly) = 240 + 1 (endpoint)
-        self.assertGreaterEqual(len(df), 240)
+    def test_aggregate_and_features(self):
+        dates = pd.date_range("2024-01-01", periods=60 * 48, freq="30min")
+        raw = pd.DataFrame({
+            "datetime": dates,
+            "consumption": 50000 + np.sin(np.arange(len(dates)) / 10) * 1000,
+            "forecast_j_1": 50000,
+            "forecast_j": 50100,
+            "nuclear": 40000,
+            "wind": 5000,
+            "solar": 1000,
+            "gas": 3000,
+            "hydraulic": 8000,
+            "co2_rate": 30,
+        })
 
-    def test_feature_engineering(self):
-        df_raw = self.pipeline.generate_historical_data(days=10)
-        
-        # Test training feature engineering (drops nan values from shift)
-        df_feats = self.pipeline.feature_engineering(df_raw, is_training=True)
-        
-        # Check required columns
-        for col in self.pipeline.feature_cols:
-            self.assertIn(col, df_feats.columns)
-            
-        # Check cyclical values are within [-1, 1]
-        self.assertTrue((df_feats['hour_sin'] >= -1.0).all() and (df_feats['hour_sin'] <= 1.0).all())
-        self.assertTrue((df_feats['month_cos'] >= -1.0).all() and (df_feats['month_cos'] <= 1.0).all())
-        
-        # Lags check (should have no null values since drops were done)
-        self.assertFalse(df_feats['lag_24h'].isnull().any())
-        self.assertFalse(df_feats['lag_7d'].isnull().any())
+        daily = self.pipeline.aggregate_to_daily(raw)
+        feats = self.pipeline.feature_engineering(daily, is_training=True)
 
-    def test_fit_transform_scaling(self):
-        df_raw = self.pipeline.generate_historical_data(days=15)
-        X_scaled, y = self.pipeline.fit_transform(df_raw)
-        
-        self.assertEqual(len(X_scaled), len(y))
-        self.assertEqual(X_scaled.shape[1], len(self.pipeline.feature_cols))
-        
-        # Scaled values mean should be roughly 0 and standard deviation roughly 1
-        # (StandardScaler behavior)
-        self.assertAlmostEqual(np.mean(X_scaled[:, 0]), 0.0, places=1)
-        self.assertAlmostEqual(np.std(X_scaled[:, 0]), 1.0, places=1)
+        self.assertIn("target_consumption_mw", feats.columns)
+        self.assertIn("lag_7d", feats.columns)
+        self.assertFalse(feats[self.pipeline.feature_cols].isnull().any().any())
 
-if __name__ == '__main__':
+    def test_fit_transform(self):
+        dates = pd.date_range("2024-01-01", periods=90 * 48, freq="30min")
+        raw = pd.DataFrame({
+            "datetime": dates,
+            "consumption": 50000 + np.random.normal(0, 1000, len(dates)),
+            "forecast_j_1": 50000,
+            "forecast_j": 50100,
+        })
+
+        daily = self.pipeline.aggregate_to_daily(raw)
+        feats = self.pipeline.feature_engineering(daily, is_training=True)
+
+        self.assertGreater(len(feats), 0)
+
+        X, y = self.pipeline.fit_transform_prepared(feats)
+
+        self.assertEqual(len(X), len(y))
+        self.assertEqual(X.shape[1], len(self.pipeline.feature_cols))
+
+
+if __name__ == "__main__":
     unittest.main()

@@ -1,173 +1,174 @@
 import os
 import time
-import datetime
 import joblib
-import pandas as pd
 import numpy as np
-from typing import Optional
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 from fastapi.responses import Response
 
+
 # 1. Initialize FastAPI app
 app = FastAPI(
-    title="RTE/EDF Electricity Consumption Predictor API",
-    description="API standardisée pour l'inférence en temps réel de la consommation électrique nationale.",
-    version="1.0.0"
+    title="RTE/EDF Daily Electricity Consumption Predictor API",
+    description="API pour prédire la consommation électrique moyenne journalière en MW à partir des données RTE Eco2mix.",
+    version="2.0.0"
 )
 
-# 2. Define Prometheus metrics
+
+# 2. Prometheus metrics
 REQUEST_COUNT = Counter(
-    "http_requests_total", 
-    "Total HTTP Requests", 
+    "http_requests_total",
+    "Total HTTP Requests",
     ["method", "endpoint", "http_status"]
 )
+
 INFERENCE_LATENCY = Histogram(
-    "inference_latency_seconds", 
+    "inference_latency_seconds",
     "Latency of inference endpoint in seconds",
     buckets=[0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0]
 )
+
 PREDICTED_CONSUMPTION = Gauge(
-    "predicted_consumption_megawatts", 
-    "Value of the electricity consumption predicted in MW"
+    "predicted_daily_consumption_mw",
+    "Predicted daily average electricity consumption in MW"
 )
 
-# 3. Model Loading
+
+# 3. Model loading
 MODEL_PATH = "models/best_model.joblib"
 PIPELINE_PATH = "models/data_pipeline.joblib"
 
 model = None
 pipeline = None
 
+
 def load_model_and_pipeline():
     global model, pipeline
-    if os.path.exists(MODEL_PATH) and os.path.exists(PIPELINE_PATH):
-        model = joblib.load(MODEL_PATH)
-        pipeline = joblib.load(PIPELINE_PATH)
-        print("Model and pipeline successfully loaded.")
-    else:
-        print("Model or pipeline not found. Training a quick default model...")
-        # Auto-train a fast model on startup to ensure API works
-        from src.models.train_evaluate import main as run_training
-        try:
-            run_training()
-            model = joblib.load(MODEL_PATH)
-            pipeline = joblib.load(PIPELINE_PATH)
-            print("Auto-training completed and model loaded.")
-        except Exception as e:
-            print(f"Error auto-training: {e}")
+
+    if not os.path.exists(MODEL_PATH) or not os.path.exists(PIPELINE_PATH):
+        raise FileNotFoundError(
+            "Model or pipeline not found. Run: python -m src.models.train_evaluate"
+        )
+
+    model = joblib.load(MODEL_PATH)
+    pipeline = joblib.load(PIPELINE_PATH)
+    print("Model and pipeline successfully loaded.")
+
 
 @app.on_event("startup")
 def startup_event():
-    load_model_and_pipeline()
+    try:
+        load_model_and_pipeline()
+    except Exception as e:
+        print(f"Startup warning: {e}")
 
-# 4. Input/Output Schemas
+
+# 4. Input / output schemas
 class PredictRequest(BaseModel):
-    datetime_str: str = Field(
-        ..., 
-        alias="datetime", 
-        description="Format ISO 8601 (ex: '2026-05-27T18:30:00')",
-        example="2026-05-27T18:30:00"
+    date: str = Field(
+        ...,
+        description="Prediction date, format YYYY-MM-DD",
+        example="2025-01-15"
     )
-    temperature: float = Field(
-        ..., 
-        description="Température nationale moyenne en degrés Celsius",
-        example=12.5
-    )
-    # Lags and rolling metrics are optional. If not provided, we fill them with smart defaults/estimations.
-    lag_24h: Optional[float] = Field(None, description="Consommation à t-24h (MW)")
-    lag_48h: Optional[float] = Field(None, description="Consommation à t-48h (MW)")
-    lag_7d: Optional[float] = Field(None, description="Consommation à t-7 jours (MW)")
-    temp_roll_mean_3h: Optional[float] = Field(None, description="Moyenne glissante 3h de la température")
-    temp_roll_mean_6h: Optional[float] = Field(None, description="Moyenne glissante 6h de la température")
+
+    forecast_j_1: float = Field(55000.0, description="RTE forecast J-1, daily average MW")
+    forecast_j: float = Field(55000.0, description="RTE forecast J, daily average MW")
+
+    lag_1d: float = Field(55000.0, description="Consumption one day before")
+    lag_7d: float = Field(55000.0, description="Consumption seven days before")
+    lag_14d: float = Field(55000.0, description="Consumption fourteen days before")
+    rolling_mean_7d: float = Field(55000.0, description="Rolling average over previous seven days")
+    rolling_mean_30d: float = Field(55000.0, description="Rolling average over previous thirty days")
+
+    fioul: float = 0.0
+    coal: float = 0.0
+    gas: float = 0.0
+    nuclear: float = 0.0
+    wind: float = 0.0
+    solar: float = 0.0
+    hydraulic: float = 0.0
+    pumping: float = 0.0
+    bioenergy: float = 0.0
+    physical_exchanges: float = 0.0
+    co2_rate: float = 0.0
+
 
 class PredictResponse(BaseModel):
-    datetime: str
+    date: str
     prediction_mw: float
     status: str
     model_used: str
     latency_sec: float
 
-# 5. API Endpoints
-@app.post("/predict", response_model=PredictResponse)
-async def predict(request: PredictRequest):
-    start_time = time.time()
-    
-    # Check if model is loaded
+
+# 5. API endpoints
+@app.get("/health")
+def health():
+    REQUEST_COUNT.labels("GET", "/health", "200").inc()
+    return {"status": "ok"}
+
+
+@app.get("/ready")
+def ready():
     if model is None or pipeline is None:
-        REQUEST_COUNT.labels(method="POST", endpoint="/predict", http_status="503").inc()
-        raise HTTPException(status_code=503, detail="Model is not initialized. Please train the model first.")
-        
-    try:
-        # Parse datetime
-        dt = pd.to_datetime(request.datetime_str)
-    except Exception:
-        REQUEST_COUNT.labels(method="POST", endpoint="/predict", http_status="400").inc()
-        raise HTTPException(status_code=400, detail="Invalid datetime format. Please use ISO 8601 format.")
-        
-    try:
-        # Fill missing features with reasonable defaults if not provided
-        # 1. Base consumption around 55000 MW if lags not provided
-        lag_24h = request.lag_24h if request.lag_24h is not None else 55000.0
-        lag_48h = request.lag_48h if request.lag_48h is not None else 55000.0
-        lag_7d = request.lag_7d if request.lag_7d is not None else 55000.0
-        
-        # 2. Rolling temperatures
-        temp_3h = request.temp_roll_mean_3h if request.temp_roll_mean_3h is not None else request.temperature
-        temp_6h = request.temp_roll_mean_6h if request.temp_roll_mean_6h is not None else request.temperature
-        
-        # Build single-row DataFrame for scaling & transformation
-        input_data = pd.DataFrame([{
-            'datetime': dt,
-            'temperature': request.temperature,
-            'consommation': 0.0  # Placeholder target
-        }])
-        
-        # Run pipeline feature engineering (it expects the columns but we will override lags manually)
-        df_feat = pipeline.feature_engineering(input_data, is_training=False)
-        
-        # Force the user-specified or defaulted lags/rolling
-        df_feat['lag_24h'] = lag_24h
-        df_feat['lag_48h'] = lag_48h
-        df_feat['lag_7d'] = lag_7d
-        df_feat['temp_roll_mean_3h'] = temp_3h
-        df_feat['temp_roll_mean_6h'] = temp_6h
-        
-        # Apply scaler
-        X = pipeline.scaler.transform(df_feat[pipeline.feature_cols].values)
-        
-        # Inference
-        pred = float(model.predict(X)[0])
-        
-        # Record metrics
-        latency = time.time() - start_time
-        INFERENCE_LATENCY.observe(latency)
-        PREDICTED_CONSUMPTION.set(pred)
-        REQUEST_COUNT.labels(method="POST", endpoint="/predict", http_status="200").inc()
-        
-        # Return response
-        return PredictResponse(
-            datetime=str(dt),
-            prediction_mw=np.round(pred, 1),
-            status="success",
-            model_used=model.__class__.__name__,
-            latency_sec=latency
-        )
-        
-    except Exception as e:
-        REQUEST_COUNT.labels(method="POST", endpoint="/predict", http_status="500").inc()
-        raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
+        REQUEST_COUNT.labels("GET", "/ready", "503").inc()
+        return {"status": "unhealthy", "reason": "model_not_loaded"}
+
+    REQUEST_COUNT.labels("GET", "/ready", "200").inc()
+    return {"status": "ready"}
+
 
 @app.get("/metrics")
 def metrics():
-    # Record a hit to /metrics
-    REQUEST_COUNT.labels(method="GET", endpoint="/metrics", http_status="200").inc()
+    REQUEST_COUNT.labels("GET", "/metrics", "200").inc()
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
-@app.get("/health")
-def health():
-    REQUEST_COUNT.labels(method="GET", endpoint="/health", http_status="200").inc()
+
+@app.post("/predict", response_model=PredictResponse)
+def predict(request: PredictRequest):
+    global model, pipeline
+
     if model is None or pipeline is None:
-        return {"status": "unhealthy", "reason": "model_not_loaded"}
-    return {"status": "ok"}
+        try:
+            load_model_and_pipeline()
+        except Exception as e:
+            REQUEST_COUNT.labels("POST", "/predict", "503").inc()
+            raise HTTPException(status_code=503, detail=str(e))
+
+    start_time = time.time()
+
+    try:
+        payload = request.dict()
+
+        # Build one inference row with same features as training
+        X_df = pipeline.prepare_inference_row(payload)
+
+        # Apply scaler saved during training
+        X_scaled = pipeline.scaler.transform(X_df.values)
+
+        # Predict daily average consumption in MW
+        prediction = float(model.predict(X_scaled)[0])
+
+        latency = time.time() - start_time
+
+        INFERENCE_LATENCY.observe(latency)
+        PREDICTED_CONSUMPTION.set(prediction)
+        REQUEST_COUNT.labels("POST", "/predict", "200").inc()
+
+        return PredictResponse(
+            date=request.date,
+            prediction_mw=round(prediction, 2),
+            status="success",
+            model_used=model.__class__.__name__,
+            latency_sec=round(latency, 6)
+        )
+
+    except ValueError as e:
+        REQUEST_COUNT.labels("POST", "/predict", "400").inc()
+        raise HTTPException(status_code=400, detail=str(e))
+
+    except Exception as e:
+        REQUEST_COUNT.labels("POST", "/predict", "500").inc()
+        raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
