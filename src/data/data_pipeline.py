@@ -6,6 +6,7 @@ from sklearn.preprocessing import StandardScaler
 
 try:
     import holidays
+
     HAS_HOLIDAYS = True
 except ImportError:
     HAS_HOLIDAYS = False
@@ -33,7 +34,6 @@ class DataPipeline:
             # RTE forecast variables
             "forecast_j_1",
             "forecast_j",
-
             # Calendar variables
             "day_of_week",
             "is_weekend",
@@ -42,14 +42,12 @@ class DataPipeline:
             "month_cos",
             "day_of_year_sin",
             "day_of_year_cos",
-
             # Historical consumption variables
             "lag_1d",
             "lag_7d",
             "lag_14d",
             "rolling_mean_7d",
             "rolling_mean_30d",
-
             # Production / system context from RTE
             "fioul",
             "coal",
@@ -69,7 +67,7 @@ class DataPipeline:
         self.daily_rows_ = 0
 
     def load_rte_file(self, file_path: str) -> pd.DataFrame:
-        #Load one RTE Eco2mix file.
+        # Load one RTE Eco2mix file.
         df = pd.read_csv(
             file_path,
             sep="\t",
@@ -134,11 +132,15 @@ class DataPipeline:
 
         # 15-minute rows often have empty consumption, so we remove them.
         df = df.dropna(subset=["datetime", "consumption"])
-        df = df.sort_values("datetime").drop_duplicates("datetime").reset_index(drop=True)
+        df = (
+            df.sort_values("datetime")
+            .drop_duplicates("datetime")
+            .reset_index(drop=True)
+        )
         return df
 
     def load_rte_folder(self, data_dir: str = "data/raw") -> pd.DataFrame:
-        #Load all RTE files from data/raw.
+        # Load all RTE files from data/raw.
         patterns = [
             str(Path(data_dir) / "eCO2mix_RTE_Annuel-Definitif_*.xls"),
             str(Path(data_dir) / "eCO2mix_RTE_En-cours-Consolide*.xls"),
@@ -162,13 +164,16 @@ class DataPipeline:
             frames.append(self.load_rte_file(file_path))
 
         raw_df = pd.concat(frames, ignore_index=True)
-        raw_df = raw_df.sort_values("datetime").drop_duplicates("datetime").reset_index(drop=True)
+        raw_df = (
+            raw_df.sort_values("datetime")
+            .drop_duplicates("datetime")
+            .reset_index(drop=True)
+        )
 
         self.data_source_ = f"RTE Eco2mix folder: {data_dir} ({len(files)} files)"
         self.raw_rows_ = len(raw_df)
         return raw_df
 
-   
     def aggregate_to_daily(self, raw_df: pd.DataFrame) -> pd.DataFrame:
         df = raw_df.copy()
         df["date"] = pd.to_datetime(df["datetime"]).dt.date
@@ -209,13 +214,15 @@ class DataPipeline:
                 daily[col] = 0.0
             elif daily[col].isna().any():
                 daily[col] = daily[col].fillna(daily[col].median())
-                
+
             daily[col] = daily[col].fillna(0.0)
 
         self.daily_rows_ = len(daily)
         return daily.sort_values("date").reset_index(drop=True)
 
-    def feature_engineering(self, daily_df: pd.DataFrame, is_training: bool = True) -> pd.DataFrame:
+    def feature_engineering(
+        self, daily_df: pd.DataFrame, is_training: bool = True
+    ) -> pd.DataFrame:
         df = daily_df.copy()
         df["date"] = pd.to_datetime(df["date"])
         df = df.sort_values("date").reset_index(drop=True)
@@ -228,8 +235,19 @@ class DataPipeline:
             fr_holidays = holidays.France()
             df["is_holiday"] = df["date"].dt.date.apply(lambda d: int(d in fr_holidays))
         else:
-            fixed_holidays = {(1, 1), (5, 1), (5, 8), (7, 14), (8, 15), (11, 1), (11, 11), (12, 25)}
-            df["is_holiday"] = df["date"].apply(lambda d: int((d.month, d.day) in fixed_holidays))
+            fixed_holidays = {
+                (1, 1),
+                (5, 1),
+                (5, 8),
+                (7, 14),
+                (8, 15),
+                (11, 1),
+                (11, 11),
+                (12, 25),
+            }
+            df["is_holiday"] = df["date"].apply(
+                lambda d: int((d.month, d.day) in fixed_holidays)
+            )
 
         month = df["date"].dt.month
         day_of_year = df["date"].dt.dayofyear
@@ -261,7 +279,7 @@ class DataPipeline:
         return df.reset_index(drop=True)
 
     def fit_transform_prepared(self, prepared_train_df: pd.DataFrame):
-        #Fit scaler on train data only. 
+        # Fit scaler on train data only.
         X = prepared_train_df[self.feature_cols].values
         y = prepared_train_df[self.target_col].values
 
@@ -270,8 +288,8 @@ class DataPipeline:
         return X_scaled, y
 
     def transform_prepared(self, prepared_df: pd.DataFrame):
-        #Transform features using the scaler fitted on train data.
-      
+        # Transform features using the scaler fitted on train data.
+
         if self.scaler is None:
             raise ValueError("Scaler is not fitted. Call fit_transform_prepared first.")
 

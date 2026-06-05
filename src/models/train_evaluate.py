@@ -17,7 +17,7 @@ TEST_RATIO = float(os.environ.get("MSPR_TEST_RATIO", "0.20"))
 
 
 def calculate_accuracy_5pct(y_true, y_pred):
-    #percentage of predictions with error <= 5%.
+    # percentage of predictions with error <= 5%.
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
     non_zero = y_true != 0
@@ -61,27 +61,20 @@ def main():
 
     models = {
         "DecisionTree": DecisionTreeRegressor(
-            max_depth=8,
-            min_samples_leaf=5,
-            random_state=42
+            max_depth=8, min_samples_leaf=5, random_state=42
         ),
         "RandomForest": RandomForestRegressor(
             n_estimators=150,
             max_depth=14,
             min_samples_leaf=3,
             random_state=42,
-            n_jobs=-1
+            n_jobs=-1,
         ),
         "KNeighbors": KNeighborsRegressor(
-            n_neighbors=7,
-            weights="distance",
-            metric="euclidean"
+            n_neighbors=7, weights="distance", metric="euclidean"
         ),
         "RBFN": RadialBasisFunctionNetwork(
-            n_centers=40,
-            gamma="scale",
-            alpha=0.1,
-            random_state=42
+            n_centers=40, gamma="scale", alpha=0.1, random_state=42
         ),
     }
 
@@ -127,7 +120,9 @@ def main():
             best_mape = mape
             best_model_name = name
 
-    print(f"\n--- Best Model Selection: {best_model_name} (MAPE: {best_mape*100:.2f}%) ---")
+    print(
+        f"\n--- Best Model Selection: {best_model_name} (MAPE: {best_mape*100:.2f}%) ---"
+    )
 
     # Save artifacts
     joblib.dump(trained_models[best_model_name], "models/best_model.joblib")
@@ -156,13 +151,17 @@ def main():
     with open("models/training_metadata.json", "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=4, ensure_ascii=False)
 
-    pred_df = pd.DataFrame({
-        "date": test_df["date"].values,
-        "y_true_mw": y_test,
-        "y_pred_mw": predictions_by_model[best_model_name],
-        "absolute_error_mw": np.abs(y_test - predictions_by_model[best_model_name]),
-        "absolute_percentage_error": np.abs((y_test - predictions_by_model[best_model_name]) / y_test),
-    })
+    pred_df = pd.DataFrame(
+        {
+            "date": test_df["date"].values,
+            "y_true_mw": y_test,
+            "y_pred_mw": predictions_by_model[best_model_name],
+            "absolute_error_mw": np.abs(y_test - predictions_by_model[best_model_name]),
+            "absolute_percentage_error": np.abs(
+                (y_test - predictions_by_model[best_model_name]) / y_test
+            ),
+        }
+    )
     pred_df.to_csv("models/test_predictions.csv", index=False)
 
     # Generate report

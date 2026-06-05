@@ -5,7 +5,13 @@ import numpy as np
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import (
+    Counter,
+    Histogram,
+    Gauge,
+    generate_latest,
+    CONTENT_TYPE_LATEST,
+)
 from fastapi.responses import Response
 
 
@@ -13,26 +19,24 @@ from fastapi.responses import Response
 app = FastAPI(
     title="RTE/EDF Daily Electricity Consumption Predictor API",
     description="API pour prédire la consommation électrique moyenne journalière en MW à partir des données RTE Eco2mix.",
-    version="2.0.0"
+    version="2.0.0",
 )
 
 
 # 2. Prometheus metrics
 REQUEST_COUNT = Counter(
-    "http_requests_total",
-    "Total HTTP Requests",
-    ["method", "endpoint", "http_status"]
+    "http_requests_total", "Total HTTP Requests", ["method", "endpoint", "http_status"]
 )
 
 INFERENCE_LATENCY = Histogram(
     "inference_latency_seconds",
     "Latency of inference endpoint in seconds",
-    buckets=[0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0]
+    buckets=[0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0],
 )
 
 PREDICTED_CONSUMPTION = Gauge(
     "predicted_daily_consumption_mw",
-    "Predicted daily average electricity consumption in MW"
+    "Predicted daily average electricity consumption in MW",
 )
 
 
@@ -68,19 +72,23 @@ def startup_event():
 # 4. Input / output schemas
 class PredictRequest(BaseModel):
     date: str = Field(
-        ...,
-        description="Prediction date, format YYYY-MM-DD",
-        example="2025-01-15"
+        ..., description="Prediction date, format YYYY-MM-DD", example="2025-01-15"
     )
 
-    forecast_j_1: float = Field(55000.0, description="RTE forecast J-1, daily average MW")
+    forecast_j_1: float = Field(
+        55000.0, description="RTE forecast J-1, daily average MW"
+    )
     forecast_j: float = Field(55000.0, description="RTE forecast J, daily average MW")
 
     lag_1d: float = Field(55000.0, description="Consumption one day before")
     lag_7d: float = Field(55000.0, description="Consumption seven days before")
     lag_14d: float = Field(55000.0, description="Consumption fourteen days before")
-    rolling_mean_7d: float = Field(55000.0, description="Rolling average over previous seven days")
-    rolling_mean_30d: float = Field(55000.0, description="Rolling average over previous thirty days")
+    rolling_mean_7d: float = Field(
+        55000.0, description="Rolling average over previous seven days"
+    )
+    rolling_mean_30d: float = Field(
+        55000.0, description="Rolling average over previous thirty days"
+    )
 
     fioul: float = 0.0
     coal: float = 0.0
@@ -162,7 +170,7 @@ def predict(request: PredictRequest):
             prediction_mw=round(prediction, 2),
             status="success",
             model_used=model.__class__.__name__,
-            latency_sec=round(latency, 6)
+            latency_sec=round(latency, 6),
         )
 
     except ValueError as e:

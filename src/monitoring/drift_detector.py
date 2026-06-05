@@ -5,6 +5,7 @@ import pandas as pd
 
 try:
     from scipy.stats import ks_2samp
+
     HAS_SCIPY = True
 except ImportError:
     HAS_SCIPY = False
@@ -16,7 +17,9 @@ class DriftDetector:
     def __init__(self, threshold_pvalue=0.05):
         self.threshold_pvalue = threshold_pvalue
 
-    def calculate_drift(self, reference_df: pd.DataFrame, current_df: pd.DataFrame, features: list) -> dict:
+    def calculate_drift(
+        self, reference_df: pd.DataFrame, current_df: pd.DataFrame, features: list
+    ) -> dict:
         """
         Compare reference training data with recent RTE data.
         """
@@ -32,7 +35,7 @@ class DriftDetector:
             if len(ref) == 0 or len(cur) == 0:
                 results[feature] = {
                     "drift_detected": False,
-                    "method": "insufficient_data"
+                    "method": "insufficient_data",
                 }
                 continue
 
@@ -42,7 +45,7 @@ class DriftDetector:
                     "drift_detected": bool(p_val < self.threshold_pvalue),
                     "method": "Kolmogorov-Smirnov",
                     "statistic": float(stat),
-                    "p_value": float(p_val)
+                    "p_value": float(p_val),
                 }
             else:
                 ref_mean = float(np.mean(ref))
@@ -54,7 +57,7 @@ class DriftDetector:
                     "drift_detected": bool(drift),
                     "method": "mean_std_fallback",
                     "reference_mean": ref_mean,
-                    "current_mean": cur_mean
+                    "current_mean": cur_mean,
                 }
 
         return results
@@ -87,7 +90,7 @@ def main():
         "solar",
         "gas",
         "hydraulic",
-        "co2_rate"
+        "co2_rate",
     ]
 
     detector = DriftDetector(threshold_pvalue=0.05)
@@ -99,15 +102,15 @@ def main():
         "data_source": pipeline.data_source_,
         "reference_period": [
             str(reference_df["date"].min()),
-            str(reference_df["date"].max())
+            str(reference_df["date"].max()),
         ],
         "current_period": [
             str(current_df["date"].min()),
-            str(current_df["date"].max())
+            str(current_df["date"].max()),
         ],
         "features_checked": features,
         "method": "Kolmogorov-Smirnov if scipy is available, otherwise mean/std fallback",
-        "results": results
+        "results": results,
     }
 
     with open("models/drift_report.json", "w", encoding="utf-8") as f:
