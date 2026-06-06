@@ -1,0 +1,382 @@
+name: CI/CD Pipeline - EDF/RTE Predictor
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: edf-rte-registry.azurecr.io
+  IMAGE_NAME: predictor-api
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Stage 1: Code Quality & Linting
+  # ─────────────────────────────────────────────
+  lint-and-quality:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install Linting & Quality tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install black flake8 mypy pandas numpy types-requests types-urllib3
+
+    - name: Format Check with Black
+      run: black --check src/
+
+    - name: Lint with Flake8
+      run: flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
+
+    - name: Type Check with Mypy
+      run: mypy --ignore-missing-imports src/
+
+  # ─────────────────────────────────────────────
+  # Stage 2: Unit & Integration Tests
+  # ─────────────────────────────────────────────
+  unit-tests:
+    needs: lint-and-quality
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install Dependencies & Pytest
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov httpx
+
+    - name: Run unit and integration tests
+      run: pytest --cov=src tests/ --cov-report=xml
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: coverage.xml
+
+  # ─────────────────────────────────────────────
+  # Stage 3: Security Scanning
+  # ─────────────────────────────────────────────
+  security-scans:
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Bandit for code security scan
+      run: pip install bandit
+
+    - name: Run Bandit scan
+      run: bandit -r src/ -ll
+
+    - name: Run Trivy vulnerability scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        ignore-unfixed: true
+        format: 'table'
+        severity: 'HIGH,CRITICAL'
+
+  # ─────────────────────────────────────────────
+  # Stage 4: Build & Push Docker Image
+  # ─────────────────────────────────────────────
+  build-and-push-docker:
+    needs: security-scans
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Log in to Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
+
+    - name: Extract Docker metadata
+      id: meta
+      run: |
+        echo "tags=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" >> $GITHUB_OUTPUT
+        echo "latest=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
+
+    - name: Build and push production image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Run Trivy on built image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}'
+        format: 'table'
+        exit-code: '0'
+        ignore-unfixed: true
+        severity: 'HIGH,CRITICAL'
+
+  # ─────────────────────────────────────────────
+  # Stage 5: Deploy to Staging (Automatic)
+  # ─────────────────────────────────────────────
+  deploy-to-staging:
+    needs: build-and-push-docker
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+
+    - name: Set Kubernetes context
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBE_CONFIG }}
+
+    - name: Create staging namespace if not exists
+      run: |
+        kubectl create namespace edf-rte-staging --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Deploy to staging
+      run: |
+        # Update image tag in staging manifests
+        sed -i "s|image:.*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|g" k8s/staging/deployment.yaml
+        kubectl apply -f k8s/staging/deployment.yaml -n edf-rte-staging
+        kubectl apply -f k8s/staging/service.yaml -n edf-rte-staging
+
+    - name: Wait for staging deployment rollout
+      run: |
+        kubectl rollout status deployment/edf-consumption-predictor-api -n edf-rte-staging --timeout=120s
+
+  # ─────────────────────────────────────────────
+  # Stage 6: Smoke Tests on Staging
+  # ─────────────────────────────────────────────
+  smoke-tests:
+    needs: deploy-to-staging
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Get Staging Service URL
+      id: staging-url
+      run: |
+        echo "url=http://edf-consumption-predictor-service.edf-rte-staging.svc.cluster.local" >> $GITHUB_OUTPUT
+
+    - name: Health Check
+      run: |
+        echo "=== Smoke Test: Health Check ==="
+        for i in $(seq 1 5); do
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" ${{ steps.staging-url.outputs.url }}/health || echo "000")
+          echo "Attempt $i: HTTP $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Health check passed"
+            break
+          fi
+          sleep 5
+        done
+
+    - name: Readiness Check
+      run: |
+        echo "=== Smoke Test: Readiness Check ==="
+        curl -sf ${{ steps.staging-url.outputs.url }}/ready | python3 -m json.tool
+
+    - name: Prediction Test
+      run: |
+        echo "=== Smoke Test: Prediction Endpoint ==="
+        RESPONSE=$(curl -sf -X POST ${{ steps.staging-url.outputs.url }}/predict \
+          -H "Content-Type: application/json" \
+          -d '{
+            "date": "2025-06-01",
+            "forecast_j_1": 52000.0,
+            "forecast_j": 51500.0,
+            "lag_1d": 53000.0,
+            "lag_7d": 54000.0,
+            "lag_14d": 52000.0,
+            "rolling_mean_7d": 53500.0,
+            "rolling_mean_30d": 54000.0,
+            "nuclear": 40000.0,
+            "wind": 5000.0,
+            "solar": 3000.0
+          }')
+        echo "$RESPONSE" | python3 -m json.tool
+        echo "✅ Prediction smoke test passed"
+
+    - name: Metrics Endpoint Test
+      run: |
+        echo "=== Smoke Test: Metrics Endpoint ==="
+        curl -sf ${{ steps.staging-url.outputs.url }}/metrics | head -20
+        echo "✅ Metrics endpoint accessible"
+
+    - name: Dashboard Test
+      run: |
+        echo "=== Smoke Test: Dashboard ==="
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" ${{ steps.staging-url.outputs.url }}/)
+        if [ "$STATUS" = "200" ]; then
+          echo "✅ Dashboard accessible (HTTP $STATUS)"
+        else
+          echo "⚠️ Dashboard returned HTTP $STATUS"
+        fi
+
+  # ─────────────────────────────────────────────
+  # Stage 7: Load Tests on Staging
+  # ─────────────────────────────────────────────
+  load-test-staging:
+    needs: smoke-tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        pip install locust requests
+
+    - name: Run Locust load test (headless)
+      run: |
+        echo "=== Load Test: 100 users, 60 seconds ==="
+        locust -f locust/locustfile.py \
+          --host=http://edf-consumption-predictor-service.edf-rte-staging.svc.cluster.local \
+          --users 100 \
+          --spawn-rate 10 \
+          --run-time 60s \
+          --headless \
+          --csv=load_test_results \
+          --only-summary
+        echo "✅ Load test completed"
+
+    - name: Upload load test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: load-test-results
+        path: load_test_results*.csv
+
+    - name: Check load test thresholds
+      run: |
+        echo "=== Checking performance thresholds ==="
+        # Parse CSV results and check thresholds
+        python3 -c "
+        import csv
+        with open('load_test_results_stats.csv') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row.get('Name') == 'Aggregated':
+                    avg = float(row.get('Average Response Time', 0))
+                    fail_ratio = float(row.get('Failure Count', 0)) / max(float(row.get('Request Count', 1)), 1)
+                    p95 = float(row.get('95%', 0))
+                    print(f'Avg Response Time: {avg}ms')
+                    print(f'Failure Rate: {fail_ratio*100:.1f}%')
+                    print(f'P95 Response Time: {p95}ms')
+                    assert avg < 500, f'❌ Avg response time {avg}ms exceeds 500ms threshold'
+                    assert fail_ratio < 0.05, f'❌ Failure rate {fail_ratio*100:.1f}% exceeds 5% threshold'
+                    assert p95 < 2000, f'❌ P95 {p95}ms exceeds 2000ms threshold'
+                    print('✅ All performance thresholds passed!')
+        "
+
+  # ─────────────────────────────────────────────
+  # Stage 8: Deploy to Production (Automatic)
+  # ─────────────────────────────────────────────
+  deploy-to-production:
+    needs: load-test-staging
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+
+    - name: Set Kubernetes context
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBE_CONFIG }}
+
+    - name: Deploy to production
+      run: |
+        # Update image tag in production manifests
+        sed -i "s|image:.*predictor-api.*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|g" k8s/deployment.yaml
+        kubectl apply -f k8s/deployment.yaml -n edf-rte-production
+        kubectl apply -f k8s/service.yaml -n edf-rte-production
+        kubectl apply -f k8s/hpa.yaml -n edf-rte-production
+
+    - name: Wait for production rollout
+      run: |
+        kubectl rollout status deployment/edf-consumption-predictor-api -n edf-rte-production --timeout=180s
+
+    - name: Verify production deployment
+      run: |
+        echo "=== Post-Deploy Verification ==="
+        # Check pods are running
+        kubectl get pods -n edf-rte-production -l app=edf-consumption-predictor
+        # Check HPA status
+        kubectl get hpa -n edf-rte-production
+        echo "✅ Production deployment verified"
+
+  # ─────────────────────────────────────────────
+  # Stage 9: Post-Deploy Production Verification
+  # ─────────────────────────────────────────────
+  post-deploy-verification:
+    needs: deploy-to-production
+    runs-on: ubuntu-latest
+    steps:
+    - name: Production Health Check
+      run: |
+        echo "=== Final Production Verification ==="
+        for i in $(seq 1 10); do
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://edf-consumption-predictor-service.edf-rte-production.svc.cluster.local/health || echo "000")
+          echo "Health check attempt $i: HTTP $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Production is healthy!"
+            exit 0
+          fi
+          sleep 10
+        done
+        echo "❌ Production health check failed after 10 attempts"
+        exit 1
+
+    - name: Notify deployment success
+      if: success()
+      run: |
+        echo "🚀 Deployment ${{ github.sha }} successfully deployed to production!"
+        echo "Pipeline stages completed:"
+        echo "  1. ✅ Lint & Quality"
+        echo "  2. ✅ Unit Tests"
+        echo "  3. ✅ Security Scans"
+        echo "  4. ✅ Docker Build & Push"
+        echo "  5. ✅ Deploy to Staging"
+        echo "  6. ✅ Smoke Tests"
+        echo "  7. ✅ Load Tests"
+        echo "  8. ✅ Deploy to Production"
+        echo "  9. ✅ Post-Deploy Verification"

@@ -1,0 +1,230 @@
+<!-- Open Data — Données Ouvertes -->
+<div class="legal-page">
+
+    <h1 class="legal-title">📊 Données Ouvertes — Open Data</h1>
+    <p class="legal-subtitle">Sources, jeux de données et conditions de réutilisation</p>
+    <p class="legal-updated">Dernière mise à jour : juin 2026</p>
+
+    <!-- Section 1 : Sources de données -->
+    <div class="legal-card">
+        <h2><span class="section-number">1</span> Sources de données</h2>
+        <p>Ce service de prédiction s'appuie sur les données ouvertes publiées par
+            <strong>RTE (Réseau de Transport d'Électricité)</strong> via la plateforme eCO2mix :</p>
+        <div class="legal-info-block">
+            <p>🔌 <strong>RTE eCO2mix</strong></p>
+            <p>Données de production et de consommation électrique en temps réel pour la France métropolitaine.</p>
+            <p>🌐 Lien : <a href="https://www.rte-france.com/eco2mix" target="_blank" rel="noopener">
+                https://www.rte-france.com/eco2mix</a></p>
+            <p>📄 Licence : <strong>Open Database License (ODbL)</strong></p>
+        </div>
+        <p>La licence ODbL autorise la libre réutilisation des données sous réserve de :</p>
+        <ul>
+            <li><strong>Attribution</strong> — mentionner la source « RTE eCO2mix ».</li>
+            <li><strong>Partage à l'identique</strong> — redistribuer les adaptations sous une licence compatible.</li>
+            <li><strong>Ouverture</strong> — ne pas appliquer de restrictions technologiques empêchant l'accès aux données.</li>
+        </ul>
+    </div>
+
+    <!-- Section 2 : Jeux de données utilisés -->
+    <div class="legal-card">
+        <h2><span class="section-number">2</span> Jeux de données utilisés</h2>
+        <p>Le modèle de prédiction est entraîné et évalué sur les jeux de données suivants :</p>
+        <table class="legal-table">
+            <thead>
+                <tr>
+                    <th>Fichier</th>
+                    <th>Période</th>
+                    <th>Granularité</th>
+                    <th>Variables principales</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>eCO2mix Annuel Définitif</td>
+                    <td>2020 — 2024</td>
+                    <td>Demi-horaire (30 min)</td>
+                    <td>Consommation, production par filière, échanges, taux CO₂</td>
+                </tr>
+                <tr>
+                    <td>eCO2mix En-cours-Consolidé</td>
+                    <td>2025</td>
+                    <td>Demi-horaire (30 min)</td>
+                    <td>Consommation, prévisions J-1 et J, production par filière</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>Les fichiers sources sont téléchargés depuis le portail Open Data de RTE et stockés dans le
+            répertoire <code>data/</code> du projet.</p>
+    </div>
+
+    <!-- Section 3 : Variables extraites -->
+    <div class="legal-card">
+        <h2><span class="section-number">3</span> Variables extraites</h2>
+        <p>Les variables suivantes sont extraites et utilisées comme features pour le modèle de prédiction :</p>
+        <table class="legal-table">
+            <thead>
+                <tr>
+                    <th>Variable</th>
+                    <th>Description</th>
+                    <th>Unité</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>Consommation</code></td>
+                    <td>Consommation électrique réelle (variable cible)</td>
+                    <td>MW</td>
+                </tr>
+                <tr>
+                    <td><code>Prévision J-1</code></td>
+                    <td>Prévision de consommation la veille par RTE</td>
+                    <td>MW</td>
+                </tr>
+                <tr>
+                    <td><code>Prévision J</code></td>
+                    <td>Prévision de consommation le jour même par RTE</td>
+                    <td>MW</td>
+                </tr>
+                <tr>
+                    <td><code>Nucléaire</code></td>
+                    <td>Production d'origine nucléaire</td>
+                    <td>MW</td>
+                </tr>
+                <tr>
+                    <td><code>Éolien</code></td>
+                    <td>Production d'origine éolienne</td>
+                    <td>MW</td>
+                </tr>
+                <tr>
+                    <td><code>Solaire</code></td>
+                    <td>Production d'origine solaire photovoltaïque</td>
+                    <td>MW</td>
+                </tr>
+                <tr>
+                    <td><code>Gaz</code></td>
+                    <td>Production à partir de centrales à gaz</td>
+                    <td>MW</td>
+                </tr>
+                <tr>
+                    <td><code>Hydraulique</code></td>
+                    <td>Production d'origine hydraulique</td>
+                    <td>MW</td>
+                </tr>
+                <tr>
+                    <td><code>CO₂</code></td>
+                    <td>Taux de CO₂ de la production électrique</td>
+                    <td>g/kWh</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Section 4 : Méthodologie de traitement -->
+    <div class="legal-card">
+        <h2><span class="section-number">4</span> Méthodologie de traitement</h2>
+        <p>Les données brutes subissent les transformations suivantes avant l'entraînement du modèle :</p>
+        <ol>
+            <li>
+                <strong>Agrégation temporelle</strong>
+                <p>Les données demi-horaires (48 points/jour) sont agrégées en moyennes journalières
+                    pour obtenir une granularité quotidienne.</p>
+            </li>
+            <li>
+                <strong>Feature engineering</strong>
+                <ul>
+                    <li><strong>Lags temporels</strong> — consommation à J-1, J-7 et J-14 pour capturer
+                        les tendances et saisonnalités.</li>
+                    <li><strong>Moyennes glissantes</strong> — moyennes sur 7 et 30 jours pour lisser les
+                        variations court-terme.</li>
+                    <li><strong>Variables calendaires</strong> — jour de la semaine, mois, indicateur week-end/jour
+                        férié pour modéliser les cycles hebdomadaires et saisonniers.</li>
+                </ul>
+            </li>
+            <li>
+                <strong>Normalisation</strong>
+                <p>Application d'un <code>StandardScaler</code> (centrage-réduction) sur toutes les variables
+                    numériques pour garantir la convergence et la stabilité des algorithmes.</p>
+            </li>
+        </ol>
+    </div>
+
+    <!-- Section 5 : Accès API public -->
+    <div class="legal-card">
+        <h2><span class="section-number">5</span> Accès API public</h2>
+        <p>Les prédictions sont accessibles via l'API REST à l'endpoint suivant :</p>
+        <div class="legal-info-block">
+            <p><strong>POST</strong> <code>/predict</code></p>
+        </div>
+
+        <h3>Exemple de requête</h3>
+        <pre><code>curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "date": "2025-06-15",
+    "forecast_j_1": 52000.0,
+    "forecast_j": 51500.0,
+    "lag_1d": 53000.0,
+    "lag_7d": 54000.0,
+    "lag_14d": 52500.0,
+    "rolling_mean_7d": 53200.0,
+    "rolling_mean_30d": 54100.0,
+    "fioul": 200.0,
+    "coal": 0.0,
+    "gas": 5000.0,
+    "nuclear": 32000.0,
+    "wind": 8000.0,
+    "solar": 6000.0,
+    "hydraulic": 9000.0,
+    "pumping": -1500.0,
+    "bioenergy": 800.0,
+    "physical_exchanges": -3000.0,
+    "co2_rate": 45.0
+  }'</code></pre>
+
+        <h3>Format de réponse</h3>
+        <pre><code>{
+    "date": "2025-06-15",
+    "prediction_mw": 51842.37,
+    "status": "success",
+    "model_used": "GradientBoostingRegressor",
+    "latency_sec": 0.003421
+}</code></pre>
+
+        <h3>Codes de réponse</h3>
+        <table class="legal-table">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Signification</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><code>200</code></td><td>Prédiction réussie</td></tr>
+                <tr><td><code>400</code></td><td>Requête invalide (paramètres manquants ou incorrects)</td></tr>
+                <tr><td><code>422</code></td><td>Erreur de validation des données d'entrée</td></tr>
+                <tr><td><code>500</code></td><td>Erreur interne du serveur</td></tr>
+                <tr><td><code>503</code></td><td>Modèle non chargé / Service indisponible</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Section 6 : Réutilisation -->
+    <div class="legal-card">
+        <h2><span class="section-number">6</span> Réutilisation</h2>
+        <p>Les prédictions générées par le Service sont <strong>accessibles librement</strong> et peuvent être
+            réutilisées sous les conditions suivantes :</p>
+        <ul>
+            <li><strong>Attribution requise</strong> — toute réutilisation des résultats doit inclure la mention :</li>
+        </ul>
+        <div class="legal-info-block">
+            <p><em>« Données source : RTE eCO2mix — Prédictions : EDF R&amp;D Electricity Consumption Predictor »</em></p>
+        </div>
+        <ul>
+            <li>Les données sources RTE eCO2mix restent soumises à la licence <strong>ODbL</strong>.</li>
+            <li>Les prédictions du modèle ne sont pas garanties et sont fournies « en l'état » (<em>as is</em>).</li>
+            <li>Toute réutilisation à des fins critiques (sûreté du réseau, trading énergie) doit faire l'objet
+                d'une validation indépendante.</li>
+        </ul>
+    </div>
+
+</div>

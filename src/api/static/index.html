@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Tableau de bord EDF/RTE — Prédiction de consommation électrique, monitoring temps réel et résultats ML." />
+  <meta name="theme-color" content="#0a0a1a" />
+  <title>EDF/RTE Predictor — Dashboard</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Dashboard Styles -->
+  <link rel="stylesheet" href="/static/css/style.css" />
+
+  <!-- Dashboard Logic -->
+  <script src="/static/js/app.js" defer></script>
+</head>
+<body>
+
+<!-- ============================================================
+     MOBILE SIDEBAR CONTROLS
+     ============================================================ -->
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Menu">☰</button>
+<div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+<!-- ============================================================
+     LAYOUT
+     ============================================================ -->
+<div class="dashboard-layout">
+
+  <!-- ======================== SIDEBAR ======================== -->
+  <aside id="sidebar" class="sidebar">
+
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <div>
+        <span class="logo-icon">⚡</span>
+      </div>
+      <div>
+        <div class="logo-text">EDF/RTE Predictor</div>
+        <div class="logo-sub">Tableau de bord</div>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+      <div class="nav-label">Principal</div>
+
+      <a class="nav-item active" data-tab="api" href="#api">
+        <span class="nav-icon">🔌</span> API
+      </a>
+      <a class="nav-item" data-tab="monitoring" href="#monitoring">
+        <span class="nav-icon">📊</span> Monitoring
+        <span class="nav-badge">Live</span>
+      </a>
+      <a class="nav-item" data-tab="load-tests" href="#load-tests">
+        <span class="nav-icon">🚀</span> Tests de Charge
+      </a>
+      <a class="nav-item" data-tab="ml-results" href="#ml-results">
+        <span class="nav-icon">🤖</span> Résultats ML
+      </a>
+
+      <div class="nav-separator"></div>
+      <div class="nav-label">Légal & Données</div>
+
+      <a class="nav-item" data-tab="rgpd" href="#rgpd">
+        <span class="nav-icon">🔒</span> RGPD
+      </a>
+      <a class="nav-item" data-tab="cgv" href="#cgv">
+        <span class="nav-icon">📋</span> CGV
+      </a>
+      <a class="nav-item" data-tab="opendata" href="#opendata">
+        <span class="nav-icon">🌐</span> Open Data
+      </a>
+    </nav>
+
+    <!-- Footer -->
+    <div class="sidebar-footer">
+      <span>EDF/RTE Predictor</span>
+      <span class="version-badge">v2.0.0</span>
+    </div>
+  </aside>
+
+  <!-- ======================== MAIN ======================== -->
+  <main class="main-content">
+
+    <!-- Header -->
+    <header class="main-header">
+      <div class="header-breadcrumb">
+        <span>Dashboard</span>
+        <span class="breadcrumb-sep">›</span>
+        <span id="breadcrumb-active" class="breadcrumb-active">🔌 API</span>
+      </div>
+      <div class="header-actions">
+        <div id="server-status-indicator" class="status-indicator loading">
+          <span class="status-dot"></span>
+          <span id="server-status-text">Connexion…</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <div class="page-content">
+
+      <!-- ====================================================
+           TAB: API
+           ==================================================== -->
+      <section id="tab-content-api" class="tab-content active">
+        <div class="section-header">
+          <h1 class="section-title">🔌 API — Vue d'ensemble</h1>
+          <p class="section-subtitle">Documentation, statut du serveur et test rapide de prédiction.</p>
+        </div>
+
+        <!-- Status + Swagger Link -->
+        <div class="stats-grid stagger-children mb-3">
+          <div class="stat-card">
+            <div class="stat-icon">🟢</div>
+            <div class="stat-label">Statut serveur</div>
+            <div class="stat-value text-success" id="api-status-label">Vérification…</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📚</div>
+            <div class="stat-label">Documentation</div>
+            <div class="stat-value" style="font-size:16px;">
+              <a href="/docs" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">
+                Ouvrir Swagger UI →
+              </a>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🔗</div>
+            <div class="stat-label">Base URL</div>
+            <div class="stat-value" style="font-size:14px;font-family:monospace;color:var(--secondary);">
+              /api
+            </div>
+          </div>
+        </div>
+
+        <!-- Endpoints List -->
+        <div class="glass-card no-hover mb-3">
+          <div class="card-header">
+            <div class="card-title"><span class="card-icon">📡</span> Endpoints disponibles</div>
+          </div>
+          <div id="endpoints-list" class="endpoint-list"></div>
+        </div>
+
+        <!-- Quick Predict Test -->
+        <div class="glass-card no-hover">
+          <div class="card-header">
+            <div class="card-title"><span class="card-icon">⚡</span> Test rapide — Prédiction</div>
+          </div>
+
+          <form id="predict-form" class="form-inline mb-2" style="align-items: flex-end;">
+            <div class="form-group">
+              <label class="form-label" for="predict-date">Date de prédiction</label>
+              <input type="date" id="predict-date" class="form-input" value="2025-07-15" required />
+            </div>
+            <div class="form-group" style="margin-left: 1rem;">
+              <label class="form-label" for="predict-model">Modèle</label>
+              <select id="predict-model" class="form-input">
+                <option value="">(Meilleur modèle par défaut)</option>
+                <option value="RandomForest">RandomForest</option>
+                <option value="DecisionTree">DecisionTree</option>
+                <option value="KNeighbors">KNeighbors</option>
+                <option value="RBFN">RBFN</option>
+              </select>
+            </div>
+            <div style="margin-left: 1rem;">
+              <button type="submit" id="predict-btn" class="btn btn-primary">⚡ Prédire</button>
+            </div>
+          </form>
+
+          <div class="form-label mt-2">Réponse</div>
+          <div id="predict-response" class="response-display">En attente d'une requête…</div>
+        </div>
+      </section>
+
+      <!-- ====================================================
+           TAB: MONITORING
+           ==================================================== -->
+      <section id="tab-content-monitoring" class="tab-content">
+        <div class="section-header">
+          <h1 class="section-title">📊 Monitoring temps réel</h1>
+          <p class="section-subtitle">Métriques serveur mises à jour toutes les 3 secondes.</p>
+        </div>
+
+        <!-- Stat Cards -->
+        <div class="stats-grid stagger-children mb-3">
+          <div class="stat-card">
+            <div class="stat-icon">📨</div>
+            <div class="stat-label">Requêtes totales</div>
+            <div id="stat-total-requests" class="stat-value text-primary">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">⏱️</div>
+            <div class="stat-label">Latence moyenne</div>
+            <div id="stat-avg-latency" class="stat-value text-secondary">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">⚡</div>
+            <div class="stat-label">Dernière prédiction</div>
+            <div id="stat-last-prediction" class="stat-value text-accent">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🕐</div>
+            <div class="stat-label">Uptime</div>
+            <div id="stat-uptime" class="stat-value text-success">—</div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="charts-grid mb-3">
+          <div class="chart-container">
+            <div class="chart-title">
+              📈 Requêtes dans le temps
+              <span class="live-badge">Live</span>
+            </div>
+            <div style="height:280px;">
+              <canvas id="metrics-chart-requests"></canvas>
+            </div>
+          </div>
+          <div class="chart-container">
+            <div class="chart-title">
+              ⏱️ Latence d'inférence
+              <span class="live-badge">Live</span>
+            </div>
+            <div style="height:280px;">
+              <canvas id="metrics-chart-latency"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gauge -->
+        <div class="charts-grid">
+          <div class="chart-container" style="max-width:420px;">
+            <div class="chart-title">⚡ Consommation prédite</div>
+            <div style="position:relative;height:260px;display:flex;align-items:center;justify-content:center;">
+              <canvas id="metrics-chart-gauge"></canvas>
+              <div style="position:absolute;text-align:center;">
+                <div id="gauge-value" style="font-size:24px;font-weight:700;color:var(--text-primary);">— MW</div>
+                <div style="font-size:12px;color:var(--text-muted);">Consommation</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================
+           TAB: LOAD TESTS
+           ==================================================== -->
+      <section id="tab-content-load-tests" class="tab-content">
+        <div class="section-header">
+          <h1 class="section-title">🚀 Tests de Charge</h1>
+          <p class="section-subtitle">Configurez et lancez un test de charge sur l'API.</p>
+        </div>
+
+        <!-- Config Form -->
+        <div class="glass-card no-hover mb-3">
+          <div class="card-header">
+            <div class="card-title"><span class="card-icon">⚙️</span> Configuration du test</div>
+          </div>
+
+          <form id="load-test-form">
+            <div class="form-row mb-2">
+              <div class="form-group">
+                <label class="form-label" for="lt-users">Utilisateurs simultanés</label>
+                <input type="number" id="lt-users" class="form-input" value="100" min="1" max="10000" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="lt-duration">Durée (secondes)</label>
+                <input type="number" id="lt-duration" class="form-input" value="30" min="5" max="600" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="lt-rampup">Montée en charge (s)</label>
+                <input type="number" id="lt-rampup" class="form-input" value="5" min="0" max="120" />
+              </div>
+            </div>
+            <button type="submit" id="load-test-btn" class="btn btn-accent btn-lg">🚀 Lancer le test</button>
+          </form>
+
+          <!-- Progress -->
+          <div id="load-test-progress" class="mt-3 hidden">
+            <div class="progress-label">
+              <span>Progression</span>
+              <span id="load-test-progress-text">0%</span>
+            </div>
+            <div class="progress-bar">
+              <div id="load-test-progress-fill" class="progress-fill" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div id="load-test-results" class="hidden">
+          <div class="section-header">
+            <h2 class="section-title" style="font-size:18px;">📊 Résultats du test</h2>
+          </div>
+
+          <div class="stats-grid stagger-children mb-3">
+            <div class="stat-card">
+              <div class="stat-label">Requêtes totales</div>
+              <div id="lt-stat-total" class="stat-value text-primary">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Temps de réponse moyen</div>
+              <div id="lt-stat-avg-rt" class="stat-value text-secondary">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">P95</div>
+              <div id="lt-stat-p95" class="stat-value text-accent">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">P99</div>
+              <div id="lt-stat-p99" class="stat-value">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Taux d'erreur</div>
+              <div id="lt-stat-error" class="stat-value text-danger">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Débit</div>
+              <div id="lt-stat-throughput" class="stat-value text-success">—</div>
+            </div>
+          </div>
+
+          <div class="charts-grid mb-3">
+            <div class="chart-container">
+              <div class="chart-title">📊 Distribution des temps de réponse</div>
+              <div style="height:280px;">
+                <canvas id="lt-chart-distribution"></canvas>
+              </div>
+            </div>
+            <div class="chart-container">
+              <div class="chart-title">📈 Requêtes par seconde</div>
+              <div style="height:280px;">
+                <canvas id="lt-chart-rps"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="charts-grid mb-3">
+            <div class="chart-container">
+              <div class="chart-title">🔴 Taux d'erreur dans le temps</div>
+              <div style="height:280px;">
+                <canvas id="lt-chart-errors"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Test History -->
+        <div class="glass-card no-hover">
+          <div class="card-header">
+            <div class="card-title"><span class="card-icon">📜</span> Historique des tests</div>
+          </div>
+          <div id="load-test-history">
+            <p class="text-muted" style="padding:12px;">Aucun test précédent</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================
+           TAB: ML RESULTS
+           ==================================================== -->
+      <section id="tab-content-ml-results" class="tab-content">
+        <div class="section-header">
+          <h1 class="section-title">🤖 Résultats Machine Learning</h1>
+          <p class="section-subtitle">Comparaison des modèles, métriques et historique des prédictions.</p>
+        </div>
+
+        <!-- Loading -->
+        <div id="ml-loading" class="loading-state hidden">
+          <div class="spinner"></div>
+          <p>Chargement des résultats…</p>
+        </div>
+
+        <div id="ml-results-content">
+          <!-- Training Metadata -->
+          <div id="ml-training-meta" class="mb-3"></div>
+
+          <!-- Model Comparison Table -->
+          <div class="glass-card no-hover mb-3">
+            <div class="card-header">
+              <div class="card-title"><span class="card-icon">🏆</span> Comparaison des modèles</div>
+            </div>
+            <div id="ml-model-table">
+              <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Chargement…</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- MAPE Chart -->
+          <div class="charts-grid mb-3">
+            <div class="chart-container">
+              <div class="chart-title">📊 Comparaison MAPE par modèle</div>
+              <div style="height:300px;">
+                <canvas id="ml-chart-mape"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Predictions vs Actual -->
+          <div class="glass-card no-hover">
+            <div class="card-header">
+              <div class="card-title"><span class="card-icon">📈</span> Prédictions vs Valeurs réelles</div>
+            </div>
+            <div style="height:350px;">
+              <canvas id="ml-chart-predictions"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================
+           TAB: RGPD
+           ==================================================== -->
+      <section id="tab-content-rgpd" class="tab-content">
+        <div class="section-header">
+          <h1 class="section-title">🔒 Politique RGPD</h1>
+          <p class="section-subtitle">Règlement Général sur la Protection des Données.</p>
+        </div>
+        <div class="glass-card no-hover">
+          <div id="rgpd-content">
+            <div class="loading-state">
+              <div class="spinner"></div>
+              <p>Chargement…</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================
+           TAB: CGV
+           ==================================================== -->
+      <section id="tab-content-cgv" class="tab-content">
+        <div class="section-header">
+          <h1 class="section-title">📋 Conditions Générales de Vente</h1>
+          <p class="section-subtitle">Termes et conditions d'utilisation du service.</p>
+        </div>
+        <div class="glass-card no-hover">
+          <div id="cgv-content">
+            <div class="loading-state">
+              <div class="spinner"></div>
+              <p>Chargement…</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================
+           TAB: OPEN DATA
+           ==================================================== -->
+      <section id="tab-content-opendata" class="tab-content">
+        <div class="section-header">
+          <h1 class="section-title">🌐 Open Data</h1>
+          <p class="section-subtitle">Sources de données ouvertes utilisées par le projet.</p>
+        </div>
+        <div class="glass-card no-hover">
+          <div id="opendata-content">
+            <div class="loading-state">
+              <div class="spinner"></div>
+              <p>Chargement…</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /.page-content -->
+  </main>
+</div><!-- /.dashboard-layout -->
+
+</body>
+</html>

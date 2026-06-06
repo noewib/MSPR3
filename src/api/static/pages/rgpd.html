@@ -1,0 +1,182 @@
+<!-- RGPD — Politique de Protection des Données Personnelles -->
+<div class="legal-page">
+
+    <h1 class="legal-title">🔒 Politique de Protection des Données Personnelles (RGPD)</h1>
+    <p class="legal-subtitle">Règlement Général sur la Protection des Données — Règlement (UE) 2016/679</p>
+    <p class="legal-updated">Dernière mise à jour : juin 2026</p>
+
+    <!-- Section 1 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 1</span> Responsable du traitement</h2>
+        <p>Le responsable du traitement des données est :</p>
+        <div class="legal-info-block">
+            <p><strong>EDF R&amp;D</strong> — en collaboration avec <strong>RTE (Réseau de Transport d'Électricité)</strong></p>
+            <p>📍 Adresse : 7 Boulevard Gaspard Monge, 91120 Palaiseau, France</p>
+            <p>📧 Contact : <a href="mailto:datascience@edf.fr">datascience@edf.fr</a></p>
+            <p>🌐 Site : <a href="https://www.edf.fr" target="_blank" rel="noopener">www.edf.fr</a></p>
+        </div>
+        <p>EDF R&amp;D développe et opère le service de prédiction de consommation électrique nationale
+            à partir des données ouvertes RTE eCO2mix, dans le cadre de ses activités de recherche
+            et d'optimisation du réseau électrique français.</p>
+    </div>
+
+    <!-- Section 2 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 2</span> Données collectées</h2>
+        <p>Le service traite exclusivement les catégories de données suivantes :</p>
+        <ul>
+            <li><strong>Données de consommation électrique RTE eCO2mix</strong> — données publiques de production
+                et de consommation du réseau électrique français, publiées en Open Data par RTE.</li>
+            <li><strong>Données agrégées et anonymisées</strong> — les données sont collectées à l'échelle nationale
+                (consommation totale France métropolitaine) et ne comportent aucune granularité individuelle.</li>
+            <li><strong>Aucune donnée personnelle individuelle</strong> — le service ne collecte, ne traite et ne
+                stocke aucune donnée permettant d'identifier directement ou indirectement une personne physique.
+                Les données de consommation sont des agrégats nationaux en mégawatts (MW).</li>
+        </ul>
+        <div class="legal-highlight">
+            <p>⚠️ <strong>Important :</strong> Ce service ne traite aucune donnée à caractère personnel au sens de
+                l'article 4 du RGPD. Les informations ci-dessous sont fournies par souci de transparence et de
+                conformité réglementaire.</p>
+        </div>
+    </div>
+
+    <!-- Section 3 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 3</span> Finalité du traitement</h2>
+        <p>Les données sont traitées pour les finalités suivantes :</p>
+        <ul>
+            <li><strong>Prédiction de la consommation électrique nationale</strong> — modélisation par apprentissage
+                automatique (Machine Learning) de la consommation journalière moyenne en MW, à partir de variables
+                historiques, météorologiques et de production.</li>
+            <li><strong>Optimisation du réseau électrique</strong> — aide à la décision pour l'équilibrage offre/demande,
+                la planification de la production et la gestion des échanges transfrontaliers.</li>
+            <li><strong>Recherche et développement</strong> — amélioration continue des modèles prédictifs,
+                benchmarking des algorithmes et publication scientifique.</li>
+        </ul>
+    </div>
+
+    <!-- Section 4 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 4</span> Base légale du traitement</h2>
+        <p>Le traitement des données repose sur la base légale suivante :</p>
+        <div class="legal-info-block">
+            <p><strong>Intérêt légitime</strong> — Article 6, paragraphe 1, point f) du RGPD</p>
+        </div>
+        <p>L'intérêt légitime poursuivi est l'optimisation du réseau électrique national et la transition
+            énergétique. Les données traitées étant exclusivement des données agrégées publiques (Open Data),
+            le traitement ne porte pas atteinte aux droits et libertés fondamentaux des personnes concernées.</p>
+        <p>Ce traitement est par ailleurs conforme à la mission de service public d'EDF et de RTE en matière
+            de sûreté du système électrique (articles L.321-6 et suivants du Code de l'énergie).</p>
+    </div>
+
+    <!-- Section 5 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 5</span> Destinataires des données</h2>
+        <p>Les données traitées et les résultats des modèles prédictifs sont accessibles aux destinataires suivants :</p>
+        <ul>
+            <li><strong>Équipe interne Data Science EDF R&amp;D</strong> — développeurs, data scientists et ingénieurs
+                en charge du développement, de l'entraînement et du déploiement des modèles.</li>
+            <li><strong>Utilisateurs de l'API</strong> — tout utilisateur autorisé accédant au service de prédiction
+                via l'endpoint REST.</li>
+        </ul>
+        <p>Aucune donnée n'est transmise à des tiers en dehors du cadre décrit ci-dessus. Aucun transfert de données
+            hors de l'Union européenne n'est effectué.</p>
+    </div>
+
+    <!-- Section 6 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 6</span> Durée de conservation</h2>
+        <p>Les données sont conservées selon les durées suivantes :</p>
+        <table class="legal-table">
+            <thead>
+                <tr>
+                    <th>Type de données</th>
+                    <th>Durée de conservation</th>
+                    <th>Justification</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Données brutes RTE eCO2mix</td>
+                    <td><strong>5 ans</strong></td>
+                    <td>Historique nécessaire à l'entraînement des modèles</td>
+                </tr>
+                <tr>
+                    <td>Modèles entraînés (fichiers .joblib)</td>
+                    <td><strong>2 ans</strong></td>
+                    <td>Versionnage et reproductibilité des résultats</td>
+                </tr>
+                <tr>
+                    <td>Logs API (requêtes, réponses, métriques)</td>
+                    <td><strong>90 jours</strong></td>
+                    <td>Monitoring, débogage et audit de performance</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>À l'expiration de ces durées, les données sont supprimées ou anonymisées de manière irréversible.</p>
+    </div>
+
+    <!-- Section 7 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 7</span> Droits des personnes</h2>
+        <p>Bien que ce service ne traite pas de données personnelles, conformément au RGPD, toute personne dispose
+            des droits suivants qu'elle peut exercer à tout moment :</p>
+        <ul>
+            <li><strong>Droit d'accès</strong> (article 15) — obtenir la confirmation du traitement et une copie des données.</li>
+            <li><strong>Droit de rectification</strong> (article 16) — demander la correction de données inexactes.</li>
+            <li><strong>Droit à l'effacement</strong> (article 17) — demander la suppression des données dans les conditions prévues.</li>
+            <li><strong>Droit à la portabilité</strong> (article 20) — recevoir les données dans un format structuré et lisible par machine.</li>
+            <li><strong>Droit d'opposition</strong> (article 21) — s'opposer au traitement pour des raisons tenant à sa situation particulière.</li>
+            <li><strong>Droit à la limitation du traitement</strong> (article 18) — demander la limitation du traitement dans certains cas.</li>
+        </ul>
+        <p>Pour exercer ces droits, adressez votre demande au Délégué à la Protection des Données (DPO) aux coordonnées
+            indiquées à l'article 9.</p>
+    </div>
+
+    <!-- Section 8 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 8</span> Sécurité des données</h2>
+        <p>EDF R&amp;D met en œuvre les mesures techniques et organisationnelles suivantes pour garantir
+            la sécurité des données :</p>
+        <ul>
+            <li><strong>Chiffrement TLS 1.3</strong> — toutes les communications API sont chiffrées en transit
+                via HTTPS avec des certificats TLS valides.</li>
+            <li><strong>Conteneurs Docker isolés</strong> — l'application est déployée dans des conteneurs Docker
+                avec isolation réseau, sans accès root, et avec des images de base minimales (Python slim).</li>
+            <li><strong>RBAC Kubernetes</strong> — contrôle d'accès basé sur les rôles (Role-Based Access Control)
+                pour la gestion des déploiements, secrets et configurations dans le cluster K8s.</li>
+            <li><strong>Secrets chiffrés</strong> — les clés API et identifiants sont stockés dans des Kubernetes Secrets
+                chiffrés au repos (encryption at rest).</li>
+            <li><strong>Monitoring continu</strong> — métriques Prometheus et alertes automatisées pour détecter
+                toute anomalie de fonctionnement.</li>
+        </ul>
+    </div>
+
+    <!-- Section 9 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 9</span> Contact — Délégué à la Protection des Données (DPO)</h2>
+        <p>Pour toute question relative à la protection des données ou pour exercer vos droits, vous pouvez contacter
+            le Délégué à la Protection des Données d'EDF :</p>
+        <div class="legal-info-block">
+            <p>📧 Email : <a href="mailto:dpo@edf.fr">dpo@edf.fr</a></p>
+            <p>📮 Courrier : Délégué à la Protection des Données — EDF SA, 22-30 avenue de Wagram, 75008 Paris, France</p>
+        </div>
+        <p>Vous disposez également du droit d'introduire une réclamation auprès de la
+            <strong>CNIL</strong> (Commission Nationale de l'Informatique et des Libertés) —
+            <a href="https://www.cnil.fr" target="_blank" rel="noopener">www.cnil.fr</a>.</p>
+    </div>
+
+    <!-- Section 10 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 10</span> Mise à jour de la politique</h2>
+        <p>La présente politique de protection des données peut être modifiée à tout moment pour s'adapter
+            aux évolutions légales, réglementaires ou techniques.</p>
+        <p>Toute modification substantielle sera communiquée aux utilisateurs via l'interface du service
+            et/ou par notification directe.</p>
+        <div class="legal-info-block">
+            <p>📅 <strong>Date de la dernière mise à jour :</strong> juin 2026</p>
+            <p>📋 <strong>Version :</strong> 2.0</p>
+        </div>
+    </div>
+
+</div>
