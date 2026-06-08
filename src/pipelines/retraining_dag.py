@@ -84,7 +84,7 @@ def train_challenger(**kwargs):
     from src.models.custom_rbfn import RadialBasisFunctionNetwork
     from sklearn.ensemble import RandomForestRegressor
 
-    # Load dataset
+    # Load dataset prepared in Task 1
     df = pd.read_parquet("tmp/extracted_data.parquet")
 
     pipeline = DataPipeline()
