@@ -255,6 +255,8 @@ class ElectricityPredictorUser(HttpUser):
 # Load shape — automatic ramp-up to 1000 users
 # ─────────────────────────────────────────────
 
+import os
+
 class StepLoadShape(LoadTestShape):
     """
     Step load shape: ramp up to 1000 users in incremental steps.
@@ -284,6 +286,9 @@ class StepLoadShape(LoadTestShape):
 
     def tick(self):
         """Return (user_count, spawn_rate) tuple or None to stop."""
+        if os.environ.get("CI") == "true":
+            return None # Disable custom shape in CI to respect CLI arguments
+            
         run_time = self.get_run_time()
 
         for stage in self.stages:

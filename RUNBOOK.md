@@ -73,7 +73,7 @@ Si une anomalie critique est détectée immédiatement après un déploiement (l
 * **Symptômes :** Les pods s'arrêtent brutalement, le HPA recrée des conteneurs qui retombent aussitôt, code d'erreur K8s `Exit Code 137`.
 * **Cause probable :** La taille des données chargées en mémoire pour l'inférence ou le calcul des métriques dépasse la limite configurée (512Mi).
 * **Résolution :**
-  1. Éditer le manifeste de déploiement [deployment.yaml](file:///c:/Users/Ph/Documents/Vscode/MSPR/k8s/deployment.yaml).
+  1. Éditer le manifeste de déploiement [deployment.yaml](k8s/deployment.yaml).
   2. Ajuster les ressources limites en doublant la mémoire allouée :
      ```yaml
      resources:

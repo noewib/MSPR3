@@ -407,8 +407,8 @@
     const now = timeLabel();
     const h = state.metricsHistory;
     h.timestamps.push(now);
-    h.requests.push(data.total_requests ?? data.request_count ?? 0);
-    h.latency.push(data.avg_latency ?? data.inference_latency ?? 0);
+    h.requests.push(data.summary?.total_requests ?? data.request_count ?? 0);
+    h.latency.push(data.summary?.avg_latency_ms ?? data.inference_latency ?? 0);
 
     // Trim to maxDataPoints
     if (h.timestamps.length > CONFIG.maxDataPoints) {
@@ -431,7 +431,7 @@
     }
 
     // Gauge
-    const consumption = data.last_prediction ?? data.consumption ?? 0;
+    const consumption = data.summary?.last_prediction ?? data.consumption ?? 0;
     if (state.charts.gauge) {
       const maxVal = 80000; // reasonable max MW for France
       const pct = Math.min((consumption / maxVal) * 100, 100);
@@ -442,10 +442,17 @@
     if (gaugeVal) gaugeVal.textContent = formatNumber(consumption, 0) + ' MW';
 
     // Stat cards
-    setText('#stat-total-requests', formatNumber(data.total_requests ?? data.request_count ?? 0));
-    setText('#stat-avg-latency', formatMs(data.avg_latency ?? data.inference_latency ?? 0));
+    setText('#stat-total-requests', formatNumber(data.summary?.total_requests ?? data.request_count ?? 0));
+    setText('#stat-avg-latency', formatMs(data.summary?.avg_latency_ms ?? data.inference_latency ?? 0));
     setText('#stat-last-prediction', formatNumber(consumption, 0) + ' MW');
-    setText('#stat-uptime', data.uptime ?? '—');
+    
+    // Format uptime correctly (uptime_seconds returns a number of seconds)
+    const uptimeStr = data.uptime_seconds 
+      ? (data.uptime_seconds > 3600 
+          ? (data.uptime_seconds/3600).toFixed(1) + ' h' 
+          : (data.uptime_seconds > 60 ? (data.uptime_seconds/60).toFixed(1) + ' m' : data.uptime_seconds + ' s'))
+      : '—';
+    setText('#stat-uptime', uptimeStr);
   }
 
   function setText(sel, val) {
