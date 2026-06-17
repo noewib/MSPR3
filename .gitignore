@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Data files
+data/raw/*.xls
+data/raw/*.xlsx
+data/raw/*.csv
+
+# Models
+models/*.joblib
+models/*.pkl
+models/*.csv
+models/*.json
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Pytest and coverage
+.pytest_cache/
+coverage.xml
+.coverage
+htmlcov/

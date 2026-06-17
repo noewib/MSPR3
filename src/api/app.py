@@ -76,10 +76,10 @@ class PredictRequest(BaseModel):
         ...,
         alias="datetime",
         description="Format ISO 8601 (ex: '2026-05-27T18:30:00')",
-        example="2026-05-27T18:30:00",
+        examples=["2026-05-27T18:30:00"],
     )
     temperature: float = Field(
-        ..., description="Température nationale moyenne en degrés Celsius", example=12.5
+        ..., description="Température nationale moyenne en degrés Celsius", examples=[12.5]
     )
     # Lags and rolling metrics are optional. If not provided, we fill them with smart defaults/estimations.
     lag_24h: Optional[float] = Field(None, description="Consommation à t-24h (MW)")
