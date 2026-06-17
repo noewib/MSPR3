@@ -1,0 +1,159 @@
+<!-- CGV — Conditions Générales d'Utilisation -->
+<div class="legal-page">
+
+    <h1 class="legal-title">📋 Conditions Générales d'Utilisation du Service API</h1>
+    <p class="legal-subtitle">EDF R&amp;D — Service de Prédiction de Consommation Électrique</p>
+    <p class="legal-updated">Dernière mise à jour : juin 2026</p>
+
+    <!-- Article 1 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 1</span> Objet</h2>
+        <p>Les présentes Conditions Générales d'Utilisation (ci-après « CGU ») ont pour objet de définir
+            les modalités et conditions d'utilisation du service de prédiction de consommation électrique
+            (ci-après « le Service ») mis à disposition par EDF R&amp;D.</p>
+        <p>Le Service est une <strong>API REST</strong> permettant d'obtenir des prédictions de consommation
+            électrique journalière moyenne (en mégawatts) pour la France métropolitaine, à partir de données
+            historiques et de variables de production issues de RTE eCO2mix.</p>
+        <p>L'utilisation du Service implique l'acceptation pleine et entière des présentes CGU.</p>
+    </div>
+
+    <!-- Article 2 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 2</span> Accès au service</h2>
+        <p>Le Service est accessible via les modalités suivantes :</p>
+        <ul>
+            <li><strong>Endpoint principal :</strong> <code>POST /predict</code> — soumission d'une requête
+                de prédiction avec les paramètres requis (date, variables de production, lags, moyennes glissantes).</li>
+            <li><strong>Endpoints auxiliaires :</strong> <code>GET /health</code> (état de santé),
+                <code>GET /ready</code> (disponibilité du modèle), <code>GET /metrics</code> (métriques Prometheus).</li>
+            <li><strong>Environnement de développement :</strong> accès libre sans authentification.</li>
+            <li><strong>Environnement de production :</strong> accès sécurisé par <strong>clé API</strong> transmise
+                dans l'en-tête HTTP <code>Authorization: Bearer &lt;API_KEY&gt;</code>.</li>
+        </ul>
+        <p>EDF R&amp;D se réserve le droit de modifier les conditions d'accès, notamment de mettre en place
+            des quotas de requêtes (rate limiting) pour garantir la qualité de service.</p>
+    </div>
+
+    <!-- Article 3 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 3</span> Utilisation du service</h2>
+        <p>L'utilisateur s'engage à :</p>
+        <ul>
+            <li>Utiliser le Service de manière <strong>conforme</strong> aux présentes CGU et à la législation
+                en vigueur.</li>
+            <li>Ne pas soumettre de requêtes excessives ou automatisées visant à dégrader les performances
+                du Service (attaques par déni de service).</li>
+            <li>Ne pas tenter de <strong>reverse engineering</strong>, décompiler ou extraire les paramètres,
+                poids ou architecture du modèle de Machine Learning sous-jacent.</li>
+            <li>Ne pas utiliser les prédictions comme seule base pour des décisions critiques relatives à la
+                sûreté du réseau électrique sans validation humaine préalable.</li>
+            <li>Citer la source des données (<em>« Données source : RTE eCO2mix »</em>) dans toute publication
+                ou communication basée sur les résultats du Service.</li>
+        </ul>
+    </div>
+
+    <!-- Article 4 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 4</span> Disponibilité du service</h2>
+        <p>EDF R&amp;D s'efforce d'assurer la disponibilité du Service selon les objectifs suivants :</p>
+        <div class="legal-info-block">
+            <p>🎯 <strong>Objectif SLA :</strong> 99,5 % de disponibilité mensuelle</p>
+            <p>⏱️ <strong>Temps de réponse cible :</strong> &lt; 500 ms (P95)</p>
+        </div>
+        <p>Des interruptions de service peuvent survenir dans les cas suivants :</p>
+        <ul>
+            <li><strong>Maintenance planifiée</strong> — communiquée <strong>48 heures à l'avance</strong> via
+                l'endpoint <code>/health</code> et le tableau de bord de monitoring.</li>
+            <li><strong>Maintenance d'urgence</strong> — en cas de faille de sécurité critique ou de défaillance
+                matérielle majeure.</li>
+            <li><strong>Mise à jour des modèles</strong> — le rechargement d'un nouveau modèle peut entraîner
+                une indisponibilité temporaire de quelques secondes.</li>
+        </ul>
+        <p>Le SLA ne couvre pas les interruptions dues à des facteurs externes (pannes réseau, fournisseur cloud,
+            force majeure).</p>
+    </div>
+
+    <!-- Article 5 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 5</span> Responsabilité</h2>
+        <p>Les prédictions fournies par le Service sont délivrées <strong>à titre indicatif</strong> et ne
+            constituent en aucun cas une garantie d'exactitude absolue.</p>
+        <ul>
+            <li>Les modèles de Machine Learning sont entraînés sur des données historiques et peuvent ne pas
+                refléter fidèlement des situations exceptionnelles (vagues de froid extrêmes, crises énergétiques,
+                événements géopolitiques).</li>
+            <li>Les performances du modèle sont évaluées par des métriques statistiques (MAE, RMSE, R²) publiées
+                dans la documentation technique. Ces métriques représentent des moyennes et ne garantissent pas
+                la précision de chaque prédiction individuelle.</li>
+            <li>L'utilisateur est seul responsable de l'interprétation et de l'utilisation des résultats.</li>
+        </ul>
+    </div>
+
+    <!-- Article 6 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 6</span> Propriété intellectuelle</h2>
+        <p>Les droits de propriété intellectuelle relatifs au Service se répartissent comme suit :</p>
+        <ul>
+            <li><strong>Modèles de Machine Learning</strong> — les modèles prédictifs (architecture, paramètres,
+                poids entraînés, pipelines de données) sont la <strong>propriété exclusive d'EDF R&amp;D</strong>
+                et sont protégés par le droit d'auteur et le secret des affaires.</li>
+            <li><strong>Code source de l'API</strong> — développé par EDF R&amp;D, propriété d'EDF.</li>
+            <li><strong>Données source RTE</strong> — les données eCO2mix sont publiées par RTE sous licence
+                <strong>Open Database License (ODbL)</strong>. Toute réutilisation doit respecter les termes
+                de cette licence, notamment l'obligation d'attribution.</li>
+        </ul>
+    </div>
+
+    <!-- Article 7 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 7</span> Protection des données</h2>
+        <p>Le traitement des données effectué dans le cadre du Service est décrit en détail dans la
+            <strong>Politique de Protection des Données Personnelles (RGPD)</strong>.</p>
+        <p>👉 <a href="#" onclick="loadPage('rgpd'); return false;">Consulter la Politique RGPD</a></p>
+        <p>En résumé : le Service ne collecte et ne traite <strong>aucune donnée personnelle</strong>.
+            Seules des données agrégées de consommation électrique nationale (données publiques RTE) sont utilisées.</p>
+    </div>
+
+    <!-- Article 8 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 8</span> Limitation de responsabilité</h2>
+        <p>Dans les limites autorisées par la loi :</p>
+        <ul>
+            <li>EDF R&amp;D <strong>ne saurait être tenu responsable</strong> des décisions prises par les
+                utilisateurs sur la base des prédictions fournies par le Service.</li>
+            <li>EDF R&amp;D <strong>ne saurait être tenu responsable</strong> des dommages directs ou indirects
+                résultant de l'utilisation ou de l'impossibilité d'utiliser le Service, y compris les pertes
+                de données, pertes financières ou interruptions d'activité.</li>
+            <li>La responsabilité d'EDF R&amp;D est en tout état de cause <strong>limitée aux dommages directs
+                et prévisibles</strong> et ne pourra excéder le montant des sommes versées par l'utilisateur
+                pour l'utilisation du Service au cours des douze (12) derniers mois.</li>
+        </ul>
+    </div>
+
+    <!-- Article 9 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 9</span> Modification des CGU</h2>
+        <p>EDF R&amp;D se réserve le droit de modifier les présentes CGU à tout moment.</p>
+        <p>Les modifications entrent en vigueur dès leur publication sur le Service. L'utilisateur est
+            réputé avoir accepté les nouvelles CGU s'il continue à utiliser le Service après leur publication.</p>
+        <p>En cas de modification substantielle, les utilisateurs seront informés par une notification visible
+            sur le tableau de bord du Service au moins <strong>30 jours</strong> avant l'entrée en vigueur
+            des nouvelles conditions.</p>
+    </div>
+
+    <!-- Article 10 -->
+    <div class="legal-card">
+        <h2><span class="section-number">Article 10</span> Loi applicable et juridiction compétente</h2>
+        <p>Les présentes CGU sont régies par le <strong>droit français</strong>.</p>
+        <p>En cas de litige relatif à l'interprétation ou à l'exécution des présentes CGU, les parties
+            s'engagent à rechercher une solution amiable avant toute action judiciaire.</p>
+        <p>À défaut de résolution amiable dans un délai de trente (30) jours, tout litige sera soumis
+            à la compétence exclusive des <strong>tribunaux de Paris</strong>, y compris en cas de pluralité
+            de défendeurs ou d'appel en garantie.</p>
+        <div class="legal-info-block">
+            <p>📅 <strong>Date d'entrée en vigueur :</strong> juin 2026</p>
+            <p>📋 <strong>Version :</strong> 2.0</p>
+        </div>
+    </div>
+
+</div>
