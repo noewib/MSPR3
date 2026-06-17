@@ -6,24 +6,28 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  PYTHONPATH: "."
+
 jobs:
   lint-and-quality:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Python 3.10
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: "3.10"
 
     - name: Install Linting & Quality tools
       run: |
         python -m pip install --upgrade pip
-        pip install black flake8 mypy pandas numpy types-requests types-urllib3
+        pip install black flake8 mypy pandas-stubs numpy types-requests types-urllib3
+        pip install -r requirements.txt
 
     - name: Format Check with Black
-      run: black --check src/
+      run: black --check src/ tests/
 
     - name: Lint with Flake8
       run: flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
@@ -32,13 +36,12 @@ jobs:
       run: mypy --ignore-missing-imports src/
 
   unit-tests:
-    needs: lint-and-quality
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Python 3.10
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: "3.10"
 
@@ -49,13 +52,18 @@ jobs:
         pip install pytest pytest-cov httpx
 
     - name: Run unit and integration tests
-      run: pytest --cov=src tests/ --cov-report=xml
+      run: pytest --cov=src tests/ --cov-report=xml -v
 
   security-scans:
-    needs: unit-tests
+    needs: [lint-and-quality, unit-tests]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
 
     - name: Install Bandit for code security scan
       run: pip install bandit
@@ -76,20 +84,20 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      uses: docker/setup-buildx-action@v3
 
     - name: Log in to Registry
-      uses: docker/login-action@v2
+      uses: docker/login-action@v3
       with:
         registry: edf-rte-registry.azurecr.io
         username: ${{ secrets.REGISTRY_USERNAME }}
         password: ${{ secrets.REGISTRY_PASSWORD }}
 
     - name: Build and push production image
-      uses: docker/build-push-action@v4
+      uses: docker/build-push-action@v5
       with:
         context: .
         push: true

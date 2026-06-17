@@ -1,0 +1,21 @@
+[project]
+name = "mspr-edf-rte-predictor"
+version = "1.0.0"
+description = "EDF/RTE Energy Consumption Predictor - MSPR Project"
+requires-python = ">=3.10"
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.mypy]
+ignore_missing_imports = true
+python_version = "3.10"
+
+[tool.flake8]
+max-line-length = 88
+select = ["E9", "F63", "F7", "F82"]
