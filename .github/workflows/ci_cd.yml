@@ -89,18 +89,12 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Log in to Registry
-      uses: docker/login-action@v3
-      with:
-        registry: edf-rte-registry.azurecr.io
-        username: ${{ secrets.REGISTRY_USERNAME }}
-        password: ${{ secrets.REGISTRY_PASSWORD }}
-
-    - name: Build and push production image
+    - name: Build production image
       uses: docker/build-push-action@v5
       with:
         context: .
-        push: true
+        push: false
+        load: true
         tags: |
           edf-rte-registry.azurecr.io/predictor-api:latest
           edf-rte-registry.azurecr.io/predictor-api:${{ github.sha }}
