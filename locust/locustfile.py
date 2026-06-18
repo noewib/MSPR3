@@ -1,52 +1,60 @@
 import random
 from datetime import datetime, timedelta
+
 from locust import HttpUser, task, between
 
+
 class ElectricityPredictorUser(HttpUser):
-    # Wait between 1 and 3 seconds between tasks to simulate human dispatchers/systems
+    # Simulate users/systems calling the API every 1 to 3 seconds
     wait_time = between(1, 3)
 
     def on_start(self):
-        """Called when a virtual user starts running."""
-        # Generate some base data for this user session
-        self.base_date = datetime.now()
+        self.base_date = datetime(2025, 1, 15)
 
     @task(8)
     def post_prediction_request(self):
-        """Simulate sending a prediction request to /predict."""
-        # Create a random timestamp in the near future/past
-        random_hours = random.randint(-48, 48)
-        target_time = self.base_date + timedelta(hours=random_hours)
-        
-        # Simulate realistic features
-        # Temperature: 5°C to 28°C
-        temp = round(random.uniform(5.0, 28.0), 1)
-        
-        # Base consumption roughly thermosensitive: ~45000 MW in summer, ~75000 MW in winter
-        approx_base = 55000.0 + max(0.0, 15.0 - temp) * 1800.0
-        
+        """Simulate sending a valid prediction request to /predict."""
+
+        random_days = random.randint(-30, 30)
+        target_date = self.base_date + timedelta(days=random_days)
+
+        # Simulated but schema-valid daily RTE-like payload
+        forecast_j = random.uniform(45000, 70000)
+        forecast_j_1 = forecast_j + random.normalvariate(0, 800)
+
         payload = {
-            "datetime": target_time.strftime("%Y-%m-%dT%H:%M:%S"),
-            "temperature": temp,
-            "lag_24h": round(approx_base + random.normalvariate(0, 1000), 1),
-            "lag_48h": round(approx_base + random.normalvariate(0, 1000), 1),
-            "lag_7d": round(approx_base + random.normalvariate(0, 1000), 1),
-            "temp_roll_mean_3h": round(temp + random.uniform(-0.5, 0.5), 1),
-            "temp_roll_mean_6h": round(temp + random.uniform(-1.0, 1.0), 1)
+            "date": target_date.strftime("%Y-%m-%d"),
+            "forecast_j_1": round(forecast_j_1, 1),
+            "forecast_j": round(forecast_j, 1),
+            "lag_1d": round(forecast_j + random.normalvariate(0, 1200), 1),
+            "lag_7d": round(forecast_j + random.normalvariate(0, 1500), 1),
+            "lag_14d": round(forecast_j + random.normalvariate(0, 1800), 1),
+            "rolling_mean_7d": round(forecast_j + random.normalvariate(0, 1000), 1),
+            "rolling_mean_30d": round(forecast_j + random.normalvariate(0, 1200), 1),
+            "fioul": round(random.uniform(50, 500), 1),
+            "coal": round(random.uniform(20, 400), 1),
+            "gas": round(random.uniform(1500, 7000), 1),
+            "nuclear": round(random.uniform(30000, 50000), 1),
+            "wind": round(random.uniform(1000, 12000), 1),
+            "solar": round(random.uniform(0, 8000), 1),
+            "hydraulic": round(random.uniform(3000, 12000), 1),
+            "pumping": round(random.uniform(-1500, 500), 1),
+            "bioenergy": round(random.uniform(500, 1200), 1),
+            "physical_exchanges": round(random.uniform(-8000, 8000), 1),
+            "co2_rate": round(random.uniform(20, 90), 1),
         }
-        
-        headers = {"Content-Type": "application/json"}
-        
-        # POST request
-        with self.client.post("/predict", json=payload, headers=headers, catch_response=True) as response:
+
+        with self.client.post("/predict", json=payload, catch_response=True) as response:
             if response.status_code == 200:
                 response.success()
             else:
-                response.failure(f"Prediction failed with status {response.status_code}: {response.text}")
+                response.failure(
+                    f"Prediction failed with status {response.status_code}: {response.text}"
+                )
 
     @task(1)
     def check_health(self):
-        """Simulate health probes checking the API health status."""
+        """Simulate health probes checking the API status."""
         self.client.get("/health")
 
     @task(1)
