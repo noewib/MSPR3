@@ -11,7 +11,7 @@
 > | Membre | MSPR 3 (Bloc 3) | MSPR 4 (Bloc 4) |
 > |---|---|---|
 > | **Noé Wibaut** | Runbook, doc finale & slides | Project framing & planning *(coordinateur)* |
-> | **Djamel Chebbah** | Deployment architecture (Docker, API, cloud, CI/CD) | Agile management & tracking |
+> | **Djamel CHEBBAH** | Deployment architecture (Docker, API, cloud, CI/CD) | Agile management & tracking |
 > | **Paul-Henri Dourneau** | Data & preprocessing (dataset RTE Eco2mix) | Communication, inclusion & slides |
 > | **Dorian Marty** | Maintainability & simulation testing | Technical specifications |
 > | **Thuy-Trang Nguyen** | Models & training (ANN, Random Forest, KNN, métriques) | Functional specifications |
